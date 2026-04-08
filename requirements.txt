@@ -1,6 +1,6 @@
-setuptools
+setuptools>=65.5.0
 streamlit
 earthengine-api
-geemap==0.34.3
-python-box==7.2.0
+geemap
+python-box
 folium
