@@ -1,6 +1,6 @@
 import streamlit as st
 import ee
-import geemap
+import geemap.foliumap as geemap  
 import datetime
 import json
 
@@ -125,7 +125,6 @@ if st.sidebar.button("Ejecutar Análisis"):
             m.addLayer(pref, vis_rgb, 'Imagen PRE')
             m.addLayer(postf, vis_rgb, 'Imagen POST')
             m.addLayer(firemask, {'palette': ['red']}, 'Áreas Quemadas (Raster)')
-            m.addLayer(firevect_final, {'color': 'cyan'}, 'Quemas por Predio (Vector)')
                 
             # La forma correcta y moderna de mostrarlo en Streamlit
             m.to_streamlit(height=700)
