@@ -116,8 +116,9 @@ if st.sidebar.button("Ejecutar Análisis"):
             ).filter(ee.Filter.lt('mean', ndvi_max_post)).filter(ee.Filter.gt('sum', area_minima))
 
             # --- VISUALIZACIÓN ---
-            # Usamos foliumap que es 100% compatible con Streamlit
-            m = geemap.foliumap.Map() 
+            # En versiones modernas de geemap, simplemente llamamos a geemap.Map()
+            # y él decide el backend correcto si las librerías están instaladas.
+            m = geemap.Map()
             m.centerObject(boundingBox, 12)
                 
             vis_rgb = {'bands': ['R', 'G', 'B'], 'min': 0, 'max': 2500, 'gamma': 1.4}
@@ -126,6 +127,7 @@ if st.sidebar.button("Ejecutar Análisis"):
             m.addLayer(firemask, {'palette': ['red']}, 'Áreas Quemadas (Raster)')
             m.addLayer(firevect_final, {'color': 'cyan'}, 'Quemas por Predio (Vector)')
                 
+            # La forma correcta y moderna de mostrarlo en Streamlit
             m.to_streamlit(height=700)
                 
             # Botón para descargar como GeoJSON (Streamlit friendly)
