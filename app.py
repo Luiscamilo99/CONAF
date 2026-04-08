@@ -1,6 +1,6 @@
 import streamlit as st
 import ee
-import geemap.foliumap as geemap  
+import geemap
 import datetime
 import json
 
@@ -12,7 +12,6 @@ def maskS2sr(image):
     qa = image.select('QA60')
     cloudBitMask = 1 << 10
     cirrusBitMask = 1 << 11
-    # CORRECCIÓN: Se utiliza .And() en lugar de .and_()
     mask = qa.bitwiseAnd(cloudBitMask).eq(0).And(qa.bitwiseAnd(cirrusBitMask).eq(0))
     return image.updateMask(mask).copyProperties(image, ["system:time_start"])
 
@@ -33,27 +32,22 @@ def renameBandsS2(image):
 # --- INICIALIZACIÓN DE EE ---
 if "EARTHENGINE_TOKEN" in st.secrets:
     try:
-        # Cargamos el JSON desde los Secrets de Streamlit
         ee_key_dict = json.loads(st.secrets["EARTHENGINE_TOKEN"])
-        
-        # Creamos las credenciales
         credentials = ee.ServiceAccountCredentials(
             ee_key_dict['client_email'], 
             key_data=ee_key_dict['private_key']
         )
-        
-        # Inicializamos con las credenciales
-        ee.Initialize(credentials)
+        if not ee.data._credentials: # Solo inicializa si no hay credenciales activas
+            ee.Initialize(credentials)
     except Exception as e:
         st.error(f"Error al conectar con Earth Engine: {e}")
 else:
-    st.error("No se encontró el token de Earth Engine. Configura los 'Secrets' en Streamlit.")
+    st.error("No se encontró el token de Earth Engine en Secrets.")
 
 # --- INTERFAZ DE STREAMLIT ---
 st.title("🔥 Sistema de Monitoreo de Quemas Agrícolas")
 st.sidebar.header("Parámetros de Análisis")
 
-# Selección de Semana (Simplificado para la App)
 semana_select = st.sidebar.text_input("Semana ISO (ej: 2025-W14)", "2025-W14")
 ind_RdNBR = st.sidebar.slider("Umbral RdNBR", 100, 500, 300)
 ndvi_max_post = st.sidebar.slider("NDVI Máx Post-Quema", 0.0, 0.5, 0.3)
@@ -61,10 +55,8 @@ area_minima = st.sidebar.number_input("Área mínima (m2)", value=1000)
 
 if st.sidebar.button("Ejecutar Análisis"):
     with st.spinner("Procesando datos satelitales..."):
-        # 1. Cargar Datos Base
         datos_base = ee.FeatureCollection("projects/conaf-478214/assets/Quemas_Final_Limpio_4326")
         
-        # Función para preparar fechas (Traducida a Python)
         def prepararFechas(feat):
             fechaInicio = ee.Date.fromYMD(feat.getNumber('inicion'), feat.getNumber('inicims'), feat.getNumber('iniciod'))
             fechaControl = ee.Date.fromYMD(feat.getNumber('contrln'), feat.getNumber('cntrlms'), feat.getNumber('contrld'))
@@ -83,51 +75,43 @@ if st.sidebar.button("Ejecutar Análisis"):
             min_inicio = ee.Date(inc_semana.aggregate_min('fecha_inicio_ms'))
             max_control = ee.Date(inc_semana.aggregate_max('fecha_control_ms'))
 
-            # Ventanas temporales
             pre_start, pre_end = min_inicio.advance(-14, 'day'), min_inicio.advance(-1, 'day')
             post_start, post_end = max_control.advance(4, 'day'), max_control.advance(21, 'day')
 
-            # Procesamiento Satelital
             base_sat = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")\
                         .filterBounds(boundingBox)\
-                        .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 40))\
+                        .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 60))\
                         .map(maskS2sr).map(get_INDEX_S2).map(renameBandsS2)
 
             pref = base_sat.filterDate(pre_start, pre_end).median().clip(boundingBox)
             postf = base_sat.filterDate(post_start, post_end).median().clip(boundingBox)
 
-            # RdNBR
-            firesev = pref.select('NBR').addBands(postf.select('NBR'))
-            RdNBR = firesev.expression("(b('NBR') - b('NBR_1')) / (sqrt(abs(b('NBR') / 1000) + 0.001))").toFloat().rename('RdNBR')
+            # Cálculo de RdNBR con nombres seguros
+            firesev = pref.select(['NBR'],['NBR_pre']).addBands(postf.select(['NBR'],['NBR_post']))
+            RdNBR = firesev.expression("(b('NBR_pre') - b('NBR_post')) / (sqrt(abs(b('NBR_pre') / 1000) + 0.001))").toFloat().rename('RdNBR')
 
-            # Máscara de fuego
-            propertyMask = ee.Image().byte().paint(inc_semana, 1)
+            propertyMask = ee.Image(0).byte().paint(inc_semana, 1)
             firemask = RdNBR.gt(ind_RdNBR).updateMask(propertyMask).selfMask()
             
-            # Vectorización
             firevect = firemask.addBands(postf.select('NDVI')).reduceToVectors(
                 geometry=boundingBox, scale=10, geometryType='polygon', 
                 eightConnected=False, labelProperty='Incendio', reducer=ee.Reducer.mean(), maxPixels=1e13
             )
 
-            # Filtrado por área y NDVI
             firevect_final = firemask.multiply(ee.Image.pixelArea()).reduceRegions(
                 collection=firevect, reducer=ee.Reducer.sum(), scale=10
             ).filter(ee.Filter.lt('mean', ndvi_max_post)).filter(ee.Filter.gt('sum', area_minima))
 
             # --- VISUALIZACIÓN ---
-            # En versiones modernas de geemap, simplemente llamamos a geemap.Map()
-            # y él decide el backend correcto si las librerías están instaladas.
+            # ee_initialize=False es CRÍTICO aquí
             m = geemap.Map(ee_initialize=False)
             m.centerObject(boundingBox, 12)
-                
+            
             vis_rgb = {'bands': ['R', 'G', 'B'], 'min': 0, 'max': 2500, 'gamma': 1.4}
-            m.addLayer(pref, vis_rgb, 'Imagen PRE')
-            m.addLayer(postf, vis_rgb, 'Imagen POST')
-            m.addLayer(firemask, {'palette': ['red']}, 'Áreas Quemadas (Raster)')
-                
-            # La forma correcta y moderna de mostrarlo en Streamlit
+            m.add_ee_layer(pref, vis_rgb, 'Imagen PRE')
+            m.add_ee_layer(postf, vis_rgb, 'Imagen POST')
+            m.add_ee_layer(firemask, {'palette': ['red']}, 'Áreas Quemadas (Raster)')
+            m.add_ee_layer(firevect_final, {'color': 'cyan'}, 'Quemas por Predio (Vector)')
+            
             m.to_streamlit(height=700)
-                
-            # Botón para descargar como GeoJSON (Streamlit friendly)
             st.write(f"Resultados encontrados: {firevect_final.size().getInfo()} polígonos.")
