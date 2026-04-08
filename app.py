@@ -118,7 +118,7 @@ if st.sidebar.button("Ejecutar Análisis"):
             # --- VISUALIZACIÓN ---
             # Usamos foliumap que es 100% compatible con Streamlit
             m = geemap.foliumap.Map() 
-             m.centerObject(boundingBox, 12)
+            m.centerObject(boundingBox, 12)
                 
             vis_rgb = {'bands': ['R', 'G', 'B'], 'min': 0, 'max': 2500, 'gamma': 1.4}
             m.addLayer(pref, vis_rgb, 'Imagen PRE')
