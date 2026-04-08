@@ -11,7 +11,7 @@ def maskS2sr(image):
     qa = image.select('QA60')
     cloudBitMask = 1 << 10
     cirrusBitMask = 1 << 11
-    mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(qa.bitwiseAnd(cirrusBitMask).eq(0))
+    mask = qa.bitwiseAnd(cloudBitMask).eq(0).and_(qa.bitwiseAnd(cirrusBitMask).eq(0))
     return image.updateMask(mask).copyProperties(image, ["system:time_start"])
 
 def get_INDEX_S2(image):
