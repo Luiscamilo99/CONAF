@@ -32,17 +32,22 @@ def renameBandsS2(image):
 import json
 
 if "EARTHENGINE_TOKEN" in st.secrets:
-    ee_key_dict = json.loads(st.secrets["EARTHENGINE_TOKEN"])
     try:
+        # Cargamos el JSON desde los Secrets de Streamlit
+        ee_key_dict = json.loads(st.secrets["EARTHENGINE_TOKEN"])
+        
+        # Creamos las credenciales
         credentials = ee.ServiceAccountCredentials(
             ee_key_dict['client_email'], 
             key_data=ee_key_dict['private_key']
         )
+        
+        # Inicializamos con las credenciales
         ee.Initialize(credentials)
     except Exception as e:
-        st.error(f"Error al inicializar Earth Engine: {e}")
+        st.error(f"Error al conectar con Earth Engine: {e}")
 else:
-    st.error("No se encontró el token de Earth Engine en los Secrets de Streamlit.")
+    st.error("No se encontró el token de Earth Engine. Configura los 'Secrets' en Streamlit.")
 # --- INTERFAZ DE STREAMLIT ---
 st.title("🔥 Sistema de Monitoreo de Quemas Agrícolas")
 st.sidebar.header("Parámetros de Análisis")
