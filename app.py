@@ -2,6 +2,7 @@ import streamlit as st
 import ee
 import geemap
 import datetime
+import json
 
 # Configuración de la página
 st.set_page_config(layout="wide", page_title="CONAF - Monitor de Quemas")
@@ -11,7 +12,8 @@ def maskS2sr(image):
     qa = image.select('QA60')
     cloudBitMask = 1 << 10
     cirrusBitMask = 1 << 11
-    mask = qa.bitwiseAnd(cloudBitMask).eq(0).and_(qa.bitwiseAnd(cirrusBitMask).eq(0))
+    # CORRECCIÓN: Se utiliza .And() en lugar de .and_()
+    mask = qa.bitwiseAnd(cloudBitMask).eq(0).And(qa.bitwiseAnd(cirrusBitMask).eq(0))
     return image.updateMask(mask).copyProperties(image, ["system:time_start"])
 
 def get_INDEX_S2(image):
@@ -29,8 +31,6 @@ def renameBandsS2(image):
     return image.select(bands).rename(new_bands)
 
 # --- INICIALIZACIÓN DE EE ---
-import json
-
 if "EARTHENGINE_TOKEN" in st.secrets:
     try:
         # Cargamos el JSON desde los Secrets de Streamlit
@@ -48,6 +48,7 @@ if "EARTHENGINE_TOKEN" in st.secrets:
         st.error(f"Error al conectar con Earth Engine: {e}")
 else:
     st.error("No se encontró el token de Earth Engine. Configura los 'Secrets' en Streamlit.")
+
 # --- INTERFAZ DE STREAMLIT ---
 st.title("🔥 Sistema de Monitoreo de Quemas Agrícolas")
 st.sidebar.header("Parámetros de Análisis")
