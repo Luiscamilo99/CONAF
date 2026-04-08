@@ -29,11 +29,20 @@ def renameBandsS2(image):
     return image.select(bands).rename(new_bands)
 
 # --- INICIALIZACIÓN DE EE ---
-try:
-    ee.Initialize()
-except Exception as e:
-    st.error("Error de autenticación con Earth Engine. Verifica tus credenciales.")
+import json
 
+if "EARTHENGINE_TOKEN" in st.secrets:
+    ee_key_dict = json.loads(st.secrets["EARTHENGINE_TOKEN"])
+    try:
+        credentials = ee.ServiceAccountCredentials(
+            ee_key_dict['client_email'], 
+            key_data=ee_key_dict['private_key']
+        )
+        ee.Initialize(credentials)
+    except Exception as e:
+        st.error(f"Error al inicializar Earth Engine: {e}")
+else:
+    st.error("No se encontró el token de Earth Engine en los Secrets de Streamlit.")
 # --- INTERFAZ DE STREAMLIT ---
 st.title("🔥 Sistema de Monitoreo de Quemas Agrícolas")
 st.sidebar.header("Parámetros de Análisis")
