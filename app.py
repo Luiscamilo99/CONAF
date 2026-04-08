@@ -118,7 +118,7 @@ if st.sidebar.button("Ejecutar Análisis"):
             # --- VISUALIZACIÓN ---
             # En versiones modernas de geemap, simplemente llamamos a geemap.Map()
             # y él decide el backend correcto si las librerías están instaladas.
-            m = geemap.Map()
+            m = geemap.Map(ee_initialize=False)
             m.centerObject(boundingBox, 12)
                 
             vis_rgb = {'bands': ['R', 'G', 'B'], 'min': 0, 'max': 2500, 'gamma': 1.4}
