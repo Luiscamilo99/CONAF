@@ -5,4 +5,4 @@ geemap==0.34.3
 python-box==7.2.0
 folium
 streamlit-folium
-ipython
+ipython==8.23.0
