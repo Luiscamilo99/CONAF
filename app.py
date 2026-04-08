@@ -116,16 +116,17 @@ if st.sidebar.button("Ejecutar Análisis"):
             ).filter(ee.Filter.lt('mean', ndvi_max_post)).filter(ee.Filter.gt('sum', area_minima))
 
             # --- VISUALIZACIÓN ---
-            m = geemap.Map()
-            m.centerObject(boundingBox, 12)
-            
+            # Usamos foliumap que es 100% compatible con Streamlit
+            m = geemap.foliumap.Map() 
+             m.centerObject(boundingBox, 12)
+                
             vis_rgb = {'bands': ['R', 'G', 'B'], 'min': 0, 'max': 2500, 'gamma': 1.4}
             m.addLayer(pref, vis_rgb, 'Imagen PRE')
             m.addLayer(postf, vis_rgb, 'Imagen POST')
             m.addLayer(firemask, {'palette': ['red']}, 'Áreas Quemadas (Raster)')
             m.addLayer(firevect_final, {'color': 'cyan'}, 'Quemas por Predio (Vector)')
-            
+                
             m.to_streamlit(height=700)
-            
+                
             # Botón para descargar como GeoJSON (Streamlit friendly)
             st.write(f"Resultados encontrados: {firevect_final.size().getInfo()} polígonos.")
