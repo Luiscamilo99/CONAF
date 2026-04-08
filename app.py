@@ -90,7 +90,7 @@ if st.sidebar.button("Ejecutar Análisis"):
             # Procesamiento Satelital
             base_sat = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")\
                         .filterBounds(boundingBox)\
-                        .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20))\
+                        .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 40))\
                         .map(maskS2sr).map(get_INDEX_S2).map(renameBandsS2)
 
             pref = base_sat.filterDate(pre_start, pre_end).median().clip(boundingBox)
