@@ -1,4 +1,4 @@
 streamlit
-earthengine-api>=0.1.390
-geemap>=0.35.0
+earthengine-api
+geemap
 streamlit-folium
