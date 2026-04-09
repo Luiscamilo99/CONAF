@@ -3,6 +3,7 @@ import ee
 import geemap
 import datetime
 import json
+from streamlit_folium import st_folium
 
 # Configuración de la página
 st.set_page_config(layout="wide", page_title="CONAF - Monitor de Quemas")
@@ -107,8 +108,8 @@ if st.sidebar.button("Ejecutar Análisis"):
             ).filter(ee.Filter.lt('mean', ndvi_max_post)).filter(ee.Filter.gt('sum', area_minima))
 
             # --- VISUALIZACIÓN ---
-            # ee_initialize=False es CRÍTICO aquí
-            m = geemap.Map(ee_initialize=False)
+            # Forzamos a que el mapa use Folium como backend
+            m = geemap.Map(ee_initialize=False) 
             m.centerObject(boundingBox, 12)
             
             vis_rgb = {'bands': ['R', 'G', 'B'], 'min': 0, 'max': 2500, 'gamma': 1.4}
@@ -117,5 +118,7 @@ if st.sidebar.button("Ejecutar Análisis"):
             m.add_ee_layer(firemask, {'palette': ['red']}, 'Áreas Quemadas (Raster)')
             m.add_ee_layer(firevect_final, {'color': 'cyan'}, 'Quemas por Predio (Vector)')
             
-            m.to_streamlit(height=700)
-            st.write(f"Resultados encontrados: {firevect_final.size().getInfo()} polígonos.")
+            # Renderizado oficial para Streamlit
+            st_folium(m, width=1200, height=700, returned_objects=[])
+            
+            st.write(f"✅ Análisis completado. Resultados encontrados: {firevect_final.size().getInfo()} polígonos.")
