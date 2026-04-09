@@ -108,17 +108,22 @@ if st.sidebar.button("Ejecutar Análisis"):
             ).filter(ee.Filter.lt('mean', ndvi_max_post)).filter(ee.Filter.gt('sum', area_minima))
 
             # --- VISUALIZACIÓN ---
-            # Forzamos a que el mapa use Folium como backend
+            # 1. Creamos el mapa de geemap
             m = geemap.Map(ee_initialize=False) 
             m.centerObject(boundingBox, 12)
             
+            # 2. Agregamos las capas
             vis_rgb = {'bands': ['R', 'G', 'B'], 'min': 0, 'max': 2500, 'gamma': 1.4}
             m.add_ee_layer(pref, vis_rgb, 'Imagen PRE')
             m.add_ee_layer(postf, vis_rgb, 'Imagen POST')
             m.add_ee_layer(firemask, {'palette': ['red']}, 'Áreas Quemadas (Raster)')
             m.add_ee_layer(firevect_final, {'color': 'cyan'}, 'Quemas por Predio (Vector)')
             
-            # Renderizado oficial para Streamlit
-            st_folium(m, width=1200, height=700, returned_objects=[])
+            # 3. EL TRUCO: Extraemos el objeto Folium puro
+            # En geemap, el mapa de folium vive en el atributo 'm' o se genera con to_dict()
+            mapa_folium = m.to_folium() 
+            
+            # 4. Renderizamos con streamlit-folium
+            st_folium(mapa_folium, width=1200, height=700, returned_objects=[])
             
             st.write(f"✅ Análisis completado. Resultados encontrados: {firevect_final.size().getInfo()} polígonos.")
