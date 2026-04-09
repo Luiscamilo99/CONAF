@@ -37,13 +37,17 @@ if "EARTHENGINE_TOKEN" in st.secrets:
             ee_key_dict['client_email'], 
             key_data=ee_key_dict['private_key']
         )
-        if not ee.data._credentials: # Solo inicializa si no hay credenciales activas
-            ee.Initialize(credentials)
+        
+        # Inicialización forzada
+        ee.Initialize(credentials)
+        
+        # Parche crítico: Inyectamos las credenciales donde geemap las busca
+        ee.data._credentials = credentials 
+        
     except Exception as e:
         st.error(f"Error al conectar con Earth Engine: {e}")
 else:
     st.error("No se encontró el token de Earth Engine en Secrets.")
-
 # --- INTERFAZ DE STREAMLIT ---
 st.title("🔥 Sistema de Monitoreo de Quemas Agrícolas")
 st.sidebar.header("Parámetros de Análisis")
